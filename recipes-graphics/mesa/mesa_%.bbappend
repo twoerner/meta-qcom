@@ -1,3 +1,7 @@
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+
+SRC_URI_append_apq8016 = " file://freedreno-hangcheck.patch"
+
 # Enable freedreno driver
 GALLIUMDRIVERS_append_apq8064 = ",freedreno"
 GALLIUMDRIVERS_append_apq8016 = ",freedreno"

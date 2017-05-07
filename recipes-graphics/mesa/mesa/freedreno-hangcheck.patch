@@ -1,0 +1,55 @@
+From 6050d5bf3d8d0043386de35cad4efa77e8be957e Mon Sep 17 00:00:00 2001
+From: Rob Clark <robdclark@gmail.com>
+Date: Sat, 6 May 2017 14:00:35 -0400
+Subject: freedreno/a3xx: fix hang w/ large render targets and small gmem
+
+Possibly other gen's have a similar limit.  Fixes glmark2 -b shadow
+with larger resolutions on devices with small gmem (for example,
+fullscreen 1080p on 8x16/db410c).
+
+Cc: mesa-stable@lists.freedesktop.org
+Signed-off-by: Rob Clark <robdclark@gmail.com>
+
+diff --git a/src/gallium/drivers/freedreno/a3xx/fd3_gmem.c b/src/gallium/drivers/freedreno/a3xx/fd3_gmem.c
+index 493fdd2..0ec769b 100644
+--- a/src/gallium/drivers/freedreno/a3xx/fd3_gmem.c
++++ b/src/gallium/drivers/freedreno/a3xx/fd3_gmem.c
+@@ -149,6 +149,9 @@ use_hw_binning(struct fd_batch *batch)
+ 	if (gmem->minx || gmem->miny)
+ 		return false;
+ 
++	if ((gmem->maxpw * gmem->maxph) > 32)
++		return false;
++
+ 	return fd_binning_enabled && ((gmem->nbins_x * gmem->nbins_y) > 2);
+ }
+ 
+diff --git a/src/gallium/drivers/freedreno/freedreno_gmem.c b/src/gallium/drivers/freedreno/freedreno_gmem.c
+index 23be047..d4b2e8d 100644
+--- a/src/gallium/drivers/freedreno/freedreno_gmem.c
++++ b/src/gallium/drivers/freedreno/freedreno_gmem.c
+@@ -219,6 +219,9 @@ calculate_tiles(struct fd_batch *batch)
+ 			div_round_up(nbins_x, tpp_x)) > 8)
+ 		tpp_x += 1;
+ 
++	gmem->maxpw = tpp_x;
++	gmem->maxph = tpp_y;
++
+ 	/* configure pipes: */
+ 	xoff = yoff = 0;
+ 	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
+diff --git a/src/gallium/drivers/freedreno/freedreno_gmem.h b/src/gallium/drivers/freedreno/freedreno_gmem.h
+index 42a8dfa..f5276ce 100644
+--- a/src/gallium/drivers/freedreno/freedreno_gmem.h
++++ b/src/gallium/drivers/freedreno/freedreno_gmem.h
+@@ -57,6 +57,7 @@ struct fd_gmem_stateobj {
+ 	uint16_t bin_w, nbins_x;
+ 	uint16_t minx, miny;
+ 	uint16_t width, height;
++	uint16_t maxpw, maxph;   /* maximum pipe width/height */
+ };
+ 
+ struct fd_batch;
+-- 
+cgit v0.10.2
+
